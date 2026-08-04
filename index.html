@@ -4,36 +4,45 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>おこCH - 公式ポータルサイト</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="./tailwind.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Firebase SDK (v11) -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        let firebaseModules = null;
+        try {
+            const firebaseApp = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js');
+            const firebaseAuth = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js');
+            const firebaseFirestore = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
 
-        // Firebase Config Setup
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-            apiKey: "",
-            authDomain: "oko-ch.firebaseapp.com",
-            projectId: "oko-ch",
-            storageBucket: "oko-ch.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abcdef"
-        };
+            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+                apiKey: "",
+                authDomain: "oko-ch.firebaseapp.com",
+                projectId: "oko-ch",
+                storageBucket: "oko-ch.appspot.com",
+                messagingSenderId: "123456789",
+                appId: "1:123456789:web:abcdef"
+            };
 
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'oko-ch-default-app';
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'oko-ch-default-app';
+            const app = firebaseApp.initializeApp(firebaseConfig);
+            const auth = firebaseAuth.getAuth(app);
+            const db = firebaseFirestore.getFirestore(app);
 
-        window.db = db;
-        window.auth = auth;
-        window.appId = appId;
-        window.firestoreModules = { collection, addDoc, onSnapshot, doc, setDoc, updateDoc };
+            window.db = db;
+            window.auth = auth;
+            window.appId = appId;
+            window.firestoreModules = {
+                collection: firebaseFirestore.collection,
+                addDoc: firebaseFirestore.addDoc,
+                onSnapshot: firebaseFirestore.onSnapshot,
+                doc: firebaseFirestore.doc,
+                setDoc: firebaseFirestore.setDoc,
+                updateDoc: firebaseFirestore.updateDoc
+            };
+        } catch (error) {
+            console.log('Firebase unavailable, using local fallback:', error);
+            window.firestoreModules = null;
+        }
     </script>
 
     <script>
