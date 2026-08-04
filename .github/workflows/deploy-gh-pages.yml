@@ -1,0 +1,32 @@
+name: Deploy static site to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare site files
+        run: |
+          mkdir -p public
+          cp index.html public/index.html
+          cp tailwind.min.css public/tailwind.min.css
+          if [ -f .nojekyll ]; then cp .nojekyll public/.nojekyll; fi
+
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
+          enable_jekyll: false
+          force_orphan: true
