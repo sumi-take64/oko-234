@@ -1,0 +1,1567 @@
+<!DOCTYPE html>
+<html lang="ja" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>おこCH - 公式ポータルサイト</title>
+    <link rel="stylesheet" href="./tailwind.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script type="module">
+        let firebaseModules = null;
+        try {
+            const firebaseApp = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js');
+            const firebaseAuth = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js');
+            const firebaseFirestore = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
+
+            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+                apiKey: "",
+                authDomain: "oko-ch.firebaseapp.com",
+                projectId: "oko-ch",
+                storageBucket: "oko-ch.appspot.com",
+                messagingSenderId: "123456789",
+                appId: "1:123456789:web:abcdef"
+            };
+
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'oko-ch-default-app';
+            const app = firebaseApp.initializeApp(firebaseConfig);
+            const auth = firebaseAuth.getAuth(app);
+            const db = firebaseFirestore.getFirestore(app);
+
+            window.db = db;
+            window.auth = auth;
+            window.appId = appId;
+            window.firestoreModules = {
+                collection: firebaseFirestore.collection,
+                addDoc: firebaseFirestore.addDoc,
+                onSnapshot: firebaseFirestore.onSnapshot,
+                doc: firebaseFirestore.doc,
+                setDoc: firebaseFirestore.setDoc,
+                updateDoc: firebaseFirestore.updateDoc
+            };
+        } catch (error) {
+            console.log('Firebase unavailable, using local fallback:', error);
+            window.firestoreModules = null;
+        }
+    </script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            red: '#FF0000',
+                            darkred: '#CC0000',
+                            accent: '#FF4500'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.05);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.2);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-200 min-h-screen flex flex-col font-sans">
+
+    <!-- 1. 最上部 リアルタイム チャンネル登録者数バー -->
+    <div class="relative z-50 bg-gradient-to-r from-red-600 via-red-700 to-amber-600 text-white py-2 px-4 text-xs sm:text-sm font-bold shadow-md">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <span class="flex h-2.5 w-2.5 relative">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
+                </span>
+                <span class="tracking-wide text-red-100">登録者数:</span>
+                <span id="subscriberCountDisplay" class="text-yellow-300 font-black text-sm sm:text-lg tracking-wider transition-all duration-300">0人</span>
+            </div>
+            <a href="https://youtube.com/@oko-234" target="_blank" rel="noopener noreferrer" 
+               class="bg-white/20 hover:bg-white/30 text-white font-bold px-3 py-1 rounded-full text-xs transition flex items-center space-x-1.5 border border-white/30 active:scale-95 cursor-pointer">
+                <i class="fa-brands fa-youtube text-sm text-red-200"></i>
+                <span>YouTubeチャンネルを開く</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- 通常モード表示エリア -->
+    <div id="publicView" class="flex-grow flex flex-col">
+        <!-- ナビゲーションバー -->
+        <header class="bg-white/90 dark:bg-gray-800/90 backdrop-blur-md shadow-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16 items-center">
+                    <!-- ロゴ -->
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center text-white font-bold text-xl shadow">
+                            <i class="fa-brands fa-youtube"></i>
+                        </div>
+                        <span class="text-xl font-black tracking-wider text-gray-900 dark:text-white">おこCH</span>
+                    </div>
+
+                    <!-- ナビゲーションリンク (PC/タブレット) -->
+                    <nav class="hidden md:flex items-center space-x-6 font-medium text-sm">
+                        <a href="#countdown-section" class="hover:text-red-600 transition">イベント予定</a>
+                        <a href="#forum-section" class="hover:text-red-600 transition font-bold text-red-600 dark:text-red-400">ファン掲示板</a>
+                        <a href="#news" class="hover:text-red-600 transition">ニュース</a>
+                        <a href="#videos" class="hover:text-red-600 transition">おすすめ動画</a>
+                        <a href="#schedule" class="hover:text-red-600 transition">今週の予定</a>
+                        <button id="openMessageModalBtn" class="hover:text-red-600 transition flex items-center space-x-1">
+                            <i class="fa-solid fa-heart text-red-500"></i>
+                            <span>応援メッセージ</span>
+                        </button>
+                    </nav>
+
+                    <!-- アクションボタン -->
+                    <div class="flex items-center space-x-2 sm:space-x-3">
+                        <!-- ログイン状態インジケーター -->
+                        <div id="userStatusBadge" class="hidden flex items-center space-x-2 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full text-xs font-bold">
+                            <i class="fa-solid fa-user-circle text-red-500"></i>
+                            <span id="navNickname">ユーザー</span>
+                            <button id="logoutUserBtn" class="text-gray-400 hover:text-red-500 ml-1" title="ログアウト">
+                                <i class="fa-solid fa-right-from-bracket"></i>
+                            </button>
+                        </div>
+
+                        <!-- ファンログインボタン（未ログイン時） -->
+                        <button id="navLoginBtn" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-3 py-1.5 rounded-full text-xs transition flex items-center space-x-1 shadow">
+                            <i class="fa-solid fa-right-to-bracket"></i>
+                            <span>ファン登録/ログイン</span>
+                        </button>
+
+                        <!-- ワンクリックYouTubeボタン -->
+                        <a href="https://youtube.com/@oko-234" target="_blank" rel="noopener noreferrer" 
+                           class="inline-flex items-center space-x-1.5 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-3 sm:px-4 rounded-full text-xs sm:text-sm transition shadow hover:shadow-lg transform active:scale-95">
+                            <i class="fa-brands fa-youtube text-base"></i>
+                            <span class="hidden sm:inline">チャンネルへ移動</span>
+                        </a>
+
+                        <!-- ダークモード切り替え -->
+                        <button id="themeToggleBtn" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300">
+                            <i class="fa-solid fa-moon dark:hidden"></i>
+                            <i class="fa-solid fa-sun hidden dark:block text-yellow-400"></i>
+                        </button>
+
+                        <!-- 管理者ログイン鍵ボタン -->
+                        <button id="openAdminModalBtn" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" title="管理者ログイン">
+                            <i class="fa-solid fa-lock"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- モバイル用サブナビゲーションバー -->
+            <div class="md:hidden flex justify-around bg-gray-100 dark:bg-gray-800 py-2 border-b border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-600 dark:text-gray-300">
+                <a href="#forum-section" class="text-red-600 dark:text-red-400 font-bold px-2 py-1">💬 掲示板</a>
+                <a href="#news" class="px-2 py-1">ニュース</a>
+                <a href="#videos" class="px-2 py-1">動画</a>
+                <button id="mobileOpenMessageBtn" class="text-amber-600 dark:text-amber-400 font-bold px-2 py-1">
+                    💌 メッセージ
+                </button>
+            </div>
+        </header>
+
+        <!-- メインコンテンツ -->
+        <main class="flex-grow">
+            <!-- HERO SECTION -->
+            <section class="relative bg-gradient-to-br from-red-600 via-red-700 to-amber-700 text-white py-12 sm:py-16 px-4 text-center overflow-hidden">
+                <div class="max-w-4xl mx-auto relative z-10">
+                    <div class="inline-block px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-[10px] sm:text-xs font-semibold uppercase tracking-wider mb-3">
+                        Official YouTube Portal
+                    </div>
+                    <h1 class="text-3xl sm:text-5xl font-black mb-4 tracking-tight drop-shadow-md">
+                        おこCH ポータルサイト
+                    </h1>
+                    <p class="text-sm sm:text-base text-red-100 mb-8 max-w-xl mx-auto leading-relaxed">
+                        YouTubeチャンネル「おこCH」の公式ポータルサイトです！
+                    </p>
+                    
+                    <div class="flex flex-col sm:flex-row justify-center gap-3">
+                        <a href="https://youtube.com/@oko-234" target="_blank" rel="noopener noreferrer" 
+                           class="inline-flex items-center justify-center space-x-2 bg-white text-red-600 font-black px-6 py-3 rounded-2xl text-base shadow-xl hover:bg-red-50 hover:scale-105 transition transform active:scale-95">
+                            <i class="fa-brands fa-youtube text-xl text-red-600"></i>
+                            <span>YouTubeを開く（ワンクリック）</span>
+                        </a>
+                        <button id="heroOpenMessageBtn" 
+                                class="inline-flex items-center justify-center space-x-2 bg-black/30 hover:bg-black/40 border border-white/20 text-white font-bold px-6 py-3 rounded-2xl text-base backdrop-blur-md transition">
+                            <i class="fa-solid fa-heart text-red-400"></i>
+                            <span>応援メッセージを送る</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- カウントダウンタイマー SECTION -->
+            <section id="countdown-section" class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-20">
+                <div id="countdownBox" class="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 shadow-xl border border-gray-100 dark:border-gray-700 text-center">
+                    <div class="inline-flex items-center space-x-2 bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 px-3 py-1 rounded-full text-xs font-bold mb-3">
+                        <i class="fa-solid fa-tower-broadcast animate-pulse"></i>
+                        <span id="timerStatusTag">NEXT LIVE / EVENT</span>
+                    </div>
+                    <h2 id="timerTitleDisplay" class="text-xl sm:text-3xl font-black text-gray-900 dark:text-white mb-6">
+                        次回生配信・イベント決定！
+                    </h2>
+
+                    <div class="grid grid-cols-4 gap-2 sm:gap-4 max-w-2xl mx-auto">
+                        <div class="bg-gray-900 text-white rounded-2xl p-2 sm:p-4 border border-gray-800 shadow-inner">
+                            <span id="timerDays" class="block font-black text-2xl sm:text-5xl text-amber-400">00</span>
+                            <span class="text-[10px] sm:text-xs text-gray-400 font-bold uppercase">日</span>
+                        </div>
+                        <div class="bg-gray-900 text-white rounded-2xl p-2 sm:p-4 border border-gray-800 shadow-inner">
+                            <span id="timerHours" class="block font-black text-2xl sm:text-5xl text-amber-400">00</span>
+                            <span class="text-[10px] sm:text-xs text-gray-400 font-bold uppercase">時間</span>
+                        </div>
+                        <div class="bg-gray-900 text-white rounded-2xl p-2 sm:p-4 border border-gray-800 shadow-inner">
+                            <span id="timerMinutes" class="block font-black text-2xl sm:text-5xl text-amber-400">00</span>
+                            <span class="text-[10px] sm:text-xs text-gray-400 font-bold uppercase">分</span>
+                        </div>
+                        <div class="bg-gray-900 text-white rounded-2xl p-2 sm:p-4 border border-gray-800 shadow-inner">
+                            <span id="timerSeconds" class="block font-black text-2xl sm:text-5xl text-red-500">00</span>
+                            <span class="text-[10px] sm:text-xs text-gray-400 font-bold uppercase">秒</span>
+                        </div>
+                    </div>
+
+                    <p id="timerDateTargetText" class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-4 font-medium">
+                        目標日時: --
+                    </p>
+                </div>
+            </section>
+
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-12">
+
+                <!-- 2. ファン専用掲示板 SECTION (ログイン必須) -->
+                <section id="forum-section" class="scroll-mt-20">
+                    <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-200 dark:border-gray-700">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-4 border-b dark:border-gray-700 gap-4">
+                            <div>
+                                <h2 class="text-xl sm:text-2xl font-extrabold flex items-center space-x-2">
+                                    <i class="fa-solid fa-comments text-red-600"></i>
+                                    <span>ファン交流 掲示板 (リアルタイム同期中)</span>
+                                </h2>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">※ご利用には会員登録・ログインが必要です</p>
+                            </div>
+                            <div id="forumUserHeader">
+                                <!-- JSでログイン状況を表示 -->
+                            </div>
+                        </div>
+
+                        <!-- 未ログイン時のロック案内画面 -->
+                        <div id="forumLockNotice" class="text-center py-12 px-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
+                            <div class="w-16 h-16 bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                                <i class="fa-solid fa-lock"></i>
+                            </div>
+                            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">掲示板に参加するにはログインが必要です</h3>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-6">
+                                おこCHファンの皆様と交流できる専用掲示板です。お名前・メールアドレス・ニックネームを登録してログインしてください。
+                            </p>
+                            <button id="forumLoginTriggerBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-3 rounded-2xl shadow-lg transition transform active:scale-95 text-sm">
+                                会員登録 / ログインして掲示板を見る
+                            </button>
+                        </div>
+
+                        <!-- ログイン時：掲示板メイン画面 -->
+                        <div id="forumMainContent" class="hidden space-y-6">
+                            <!-- 投稿フォーム -->
+                            <form id="forumPostForm" onsubmit="return false;" class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-2xl border border-gray-200 dark:border-gray-600">
+                                <div class="flex items-center space-x-2 mb-2 text-xs font-bold text-gray-600 dark:text-gray-300">
+                                    <i class="fa-solid fa-pen"></i>
+                                    <span>投稿作成 (<span id="forumPosterNickname" class="text-red-600 dark:text-red-400"></span> として投稿)</span>
+                                </div>
+                                <textarea id="forumPostText" rows="3" placeholder="おこCHについて語り合おう！" 
+                                          class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none mb-3" required></textarea>
+                                <div class="flex justify-end">
+                                    <button type="submit" id="submitForumPostBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-2 rounded-xl text-xs sm:text-sm transition shadow">
+                                        投稿する
+                                    </button>
+                                </div>
+                            </form>
+
+                            <!-- 投稿一覧 -->
+                            <div id="forumPostsContainer" class="space-y-4">
+                                <!-- JSで動的レンダリング -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ニュース SECTION -->
+                <section id="news" class="scroll-mt-20">
+                    <div class="mb-6 border-b dark:border-gray-700 pb-3">
+                        <h2 class="text-xl sm:text-2xl font-extrabold flex items-center space-x-2">
+                            <i class="fa-solid fa-bullhorn text-red-600"></i>
+                            <span>最新ニュース・お知らせ</span>
+                        </h2>
+                    </div>
+                    <div id="newsContainer" class="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                        <!-- JSで動的レンダリング -->
+                    </div>
+                </section>
+
+                <!-- おすすめ動画 SECTION -->
+                <section id="videos" class="scroll-mt-20">
+                    <div class="mb-6 border-b dark:border-gray-700 pb-3">
+                        <h2 class="text-xl sm:text-2xl font-extrabold flex items-center space-x-2">
+                            <i class="fa-solid fa-play text-red-600"></i>
+                            <span>おすすめ動画</span>
+                        </h2>
+                    </div>
+                    <div id="videosContainer" class="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                        <!-- JSで動的レンダリング -->
+                    </div>
+                </section>
+
+                <!-- 今週の予定 SECTION -->
+                <section id="schedule" class="scroll-mt-20">
+                    <div class="mb-6 border-b dark:border-gray-700 pb-3">
+                        <h2 class="text-xl sm:text-2xl font-extrabold flex items-center space-x-2">
+                            <i class="fa-solid fa-calendar-days text-red-600"></i>
+                            <span>配信・更新スケジュール</span>
+                        </h2>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                        <div id="scheduleContainer" class="grid gap-3 grid-cols-2 sm:grid-cols-4 md:grid-cols-7">
+                            <!-- JSで動的レンダリング -->
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+
+        <!-- フッター -->
+        <footer class="bg-gray-900 text-gray-400 py-8 border-t border-gray-800">
+            <div class="max-w-7xl mx-auto px-4 text-center space-y-3">
+                <div class="flex justify-center items-center space-x-2">
+                    <div class="w-6 h-6 rounded-full bg-red-600 flex items-center justify-center text-white font-bold text-xs">
+                        <i class="fa-brands fa-youtube"></i>
+                    </div>
+                    <span class="text-base font-black text-white">おこCH</span>
+                </div>
+                <p class="text-xs text-gray-500">&copy; おこCH Official Portal. All Rights Reserved.</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- ==================== 3ステップ 会員登録・ログインモーダル ==================== -->
+    <div id="userLoginModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-gray-800 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700 relative">
+            <!-- ヘッダー -->
+            <div class="bg-gradient-to-r from-red-600 to-amber-600 text-white p-6 text-center relative">
+                <button id="closeUserLoginModalBtn" class="absolute top-4 right-4 text-white hover:text-gray-200 text-xl">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-2 text-xl">
+                    <i class="fa-solid fa-user-plus"></i>
+                </div>
+                <h3 class="text-lg font-black">ファン会員登録 / ログイン</h3>
+                <p class="text-xs text-red-100 mt-1">ステップに沿って情報を入力してください</p>
+                
+                <!-- プログレスバー (1 ~ 3ステップ) -->
+                <div class="flex justify-between items-center mt-6 px-4">
+                    <div id="stepDot1" class="w-8 h-8 rounded-full bg-white text-red-600 font-bold flex items-center justify-center text-xs shadow">1</div>
+                    <div class="flex-grow h-1 bg-white/30 mx-2"></div>
+                    <div id="stepDot2" class="w-8 h-8 rounded-full bg-white/40 text-white font-bold flex items-center justify-center text-xs">2</div>
+                    <div class="flex-grow h-1 bg-white/30 mx-2"></div>
+                    <div id="stepDot3" class="w-8 h-8 rounded-full bg-white/40 text-white font-bold flex items-center justify-center text-xs">3</div>
+                </div>
+            </div>
+
+            <!-- ステップフォーム -->
+            <div class="p-6">
+                <!-- STEP 1: 苗字と名前 -->
+                <div id="step1Content" class="space-y-4">
+                    <div class="text-center mb-4">
+                        <span class="text-xs font-bold text-red-600 dark:text-red-400">STEP 1 / 3</span>
+                        <h4 class="font-bold text-base text-gray-900 dark:text-white">お名前を入力</h4>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">苗字（姓）</label>
+                            <input type="text" id="inputLastName" placeholder="山田" class="w-full px-3 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">名前（名）</label>
+                            <input type="text" id="inputFirstName" placeholder="太郎" class="w-full px-3 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
+                        </div>
+                    </div>
+                    <button id="nextStep1Btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl text-sm transition shadow mt-4">
+                        次へ進む (メールアドレス設定)
+                    </button>
+                </div>
+
+                <!-- STEP 2: メールアドレス -->
+                <div id="step2Content" class="hidden space-y-4">
+                    <div class="text-center mb-4">
+                        <span class="text-xs font-bold text-red-600 dark:text-red-400">STEP 2 / 3</span>
+                        <h4 class="font-bold text-base text-gray-900 dark:text-white">メールアドレスを入力</h4>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">メールアドレス</label>
+                        <input type="email" id="inputEmail" placeholder="example@email.com" class="w-full px-3 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
+                    </div>
+                    <div class="flex gap-2 pt-2">
+                        <button id="backStep2Btn" class="w-1/3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold py-3 rounded-xl text-xs">
+                            戻る
+                        </button>
+                        <button id="nextStep2Btn" class="w-2/3 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl text-sm transition shadow">
+                            次へ進む (ニックネーム設定)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- STEP 3: ニックネーム -->
+                <div id="step3Content" class="hidden space-y-4">
+                    <div class="text-center mb-4">
+                        <span class="text-xs font-bold text-red-600 dark:text-red-400">STEP 3 / 3</span>
+                        <h4 class="font-bold text-base text-gray-900 dark:text-white">表示用ニックネームを入力</h4>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">サイト内でのニックネーム</label>
+                        <input type="text" id="inputNickname" placeholder="おこファン太郎" class="w-full px-3 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
+                        <p class="text-[10px] text-gray-400 mt-1">※掲示板での表示名になります</p>
+                    </div>
+                    <div class="flex gap-2 pt-2">
+                        <button id="backStep3Btn" class="w-1/3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold py-3 rounded-xl text-xs">
+                            戻る
+                        </button>
+                        <button id="completeLoginBtn" class="w-2/3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-3 rounded-xl text-sm transition shadow">
+                            登録完了・ログイン
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 応援メッセージ専用モーダル ==================== -->
+    <div id="messageModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-md hidden flex items-center justify-center p-2 sm:p-4">
+        <div class="bg-white dark:bg-gray-800 w-full max-w-3xl max-h-[90vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700">
+            <div class="bg-gradient-to-r from-red-600 to-amber-600 text-white p-4 sm:p-6 flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <i class="fa-solid fa-heart text-2xl text-red-200"></i>
+                    <div>
+                        <h2 class="text-lg sm:text-xl font-black">応援メッセージボード</h2>
+                        <p class="text-xs text-red-100">おこCHへ温かい応援メッセージを送ろう！</p>
+                    </div>
+                </div>
+                <button id="closeMessageModalBtn" class="text-white hover:text-gray-200 p-2 text-xl">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-4 sm:p-6 overflow-y-auto space-y-6 flex-grow">
+                <div class="bg-red-50 dark:bg-red-950/30 p-4 sm:p-5 rounded-2xl border border-red-200 dark:border-red-800/50">
+                    <h3 class="font-bold text-sm text-red-900 dark:text-red-200 mb-3 flex items-center">
+                        <i class="fa-solid fa-pen mr-2"></i>メッセージを書き込む
+                    </h3>
+                    <form id="commentForm" onsubmit="return false;" class="space-y-3">
+                        <div>
+                            <input type="text" id="commentAuthor" placeholder="ニックネーム (任意)" 
+                                   class="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <textarea id="commentText" rows="3" placeholder="いつも応援してます！動画楽しみにしてます！" 
+                                      class="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none" required></textarea>
+                        </div>
+                        <button type="submit" id="submitCommentBtn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-xl text-sm transition shadow">
+                            投稿する
+                        </button>
+                    </form>
+                </div>
+
+                <div>
+                    <h3 class="font-bold text-sm text-gray-500 dark:text-gray-400 mb-3 flex items-center">
+                        <i class="fa-solid fa-comments mr-2"></i>届いたメッセージ一覧
+                    </h3>
+                    <div id="commentsContainer" class="space-y-3">
+                        <!-- JS描画 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 管理者専用ダッシュボード画面 ==================== -->
+    <div id="adminView" class="hidden flex-grow flex flex-col bg-slate-900 text-slate-100 min-h-screen">
+        <!-- 管理者ヘッダー -->
+        <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-40 px-4 sm:px-8 py-3 sm:py-4 flex justify-between items-center shadow-lg">
+            <div class="flex items-center space-x-2 sm:space-x-3">
+                <span class="bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded text-xs">ADMIN</span>
+                <h1 class="text-sm sm:text-lg font-black text-white">おこCH 管理画面</h1>
+            </div>
+            <button id="exitAdminBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold text-xs sm:text-sm px-3 sm:px-4 py-2 rounded-xl transition flex items-center space-x-1 shadow">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                <span>通常表示に戻る</span>
+            </button>
+        </header>
+
+        <!-- 管理画面メインコンテンツ -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-grow space-y-8">
+
+            <!-- 登録ユーザー（ログインユーザー）管理パネル -->
+            <section class="bg-slate-800 rounded-2xl p-4 sm:p-6 border border-slate-700 shadow">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-base sm:text-lg font-bold text-amber-400 flex items-center space-x-2">
+                        <i class="fa-solid fa-users-gear"></i>
+                        <span>ファン会員・ログインユーザー一覧 (クラウドDB同期中)</span>
+                    </h2>
+                    <span id="adminUserTotalBadge" class="bg-amber-500/20 text-amber-300 text-xs px-3 py-1 rounded-full border border-amber-500/30">
+                        登録数: 0人
+                    </span>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-300">
+                        <thead class="bg-slate-700 text-amber-400 font-bold uppercase border-b border-slate-600">
+                            <tr>
+                                <th class="py-3 px-3">登録日時</th>
+                                <th class="py-3 px-3">氏名（苗字・名前）</th>
+                                <th class="py-3 px-3">メールアドレス</th>
+                                <th class="py-3 px-3">ニックネーム</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminUsersTableBody" class="divide-y divide-slate-700">
+                            <!-- JSで動的描画 -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- カウントダウンタイマー設定 -->
+            <section class="bg-slate-800 rounded-2xl p-4 sm:p-6 border border-slate-700 shadow">
+                <h2 class="text-base sm:text-lg font-bold mb-4 text-amber-400 flex items-center space-x-2">
+                    <i class="fa-solid fa-stopwatch"></i>
+                    <span>カウントダウンタイマー設定</span>
+                </h2>
+                <div class="space-y-4">
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1">イベント・配信タイトル</label>
+                            <input type="text" id="adminTimerTitle" class="w-full bg-slate-700 border border-slate-600 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="例: 夏休み特別24時間生配信！">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1">目標日時 (日時 & 時間)</label>
+                            <input type="datetime-local" id="adminTimerDatetime" class="w-full bg-slate-700 border border-slate-600 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500">
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between pt-2">
+                        <label class="flex items-center space-x-2 text-xs font-bold text-slate-300 cursor-pointer">
+                            <input type="checkbox" id="adminTimerActive" class="w-4 h-4 rounded text-amber-500 focus:ring-amber-500">
+                            <span>タイマーを表示する</span>
+                        </label>
+                        <button id="saveTimerBtn" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-6 py-2 rounded-xl transition text-sm">
+                            タイマー設定を保存・更新
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- チャンネル登録者数 変更 -->
+            <section class="bg-slate-800 rounded-2xl p-4 sm:p-6 border border-slate-700 shadow">
+                <h2 class="text-base sm:text-lg font-bold mb-3 text-amber-400 flex items-center space-x-2">
+                    <i class="fa-solid fa-users"></i>
+                    <span>チャンネル登録者数の変更 (即時反映)</span>
+                </h2>
+                <div class="flex flex-col sm:flex-row items-center gap-3">
+                    <input type="text" id="adminSubCountInput" class="bg-slate-700 border border-slate-600 rounded-xl px-4 py-2 text-white font-bold w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm" placeholder="例: 12,340人">
+                    <button id="updateSubCountBtn" class="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-6 py-2 rounded-xl transition text-sm">
+                        即時更新
+                    </button>
+                </div>
+            </section>
+
+            <!-- ニュース管理 -->
+            <section class="bg-slate-800 rounded-2xl p-4 sm:p-6 border border-slate-700 shadow">
+                <h2 class="text-base sm:text-lg font-bold mb-4 text-amber-400 flex items-center space-x-2">
+                    <i class="fa-solid fa-newspaper"></i>
+                    <span>ニュース・お知らせの追加</span>
+                </h2>
+                <div class="space-y-3">
+                    <div class="grid md:grid-cols-3 gap-3">
+                        <div class="md:col-span-2">
+                            <label class="block text-[10px] font-bold text-slate-400 mb-1">タイトル</label>
+                            <input type="text" id="adminNewsTitle" placeholder="タイトルを入力..." class="w-full bg-slate-700 border border-slate-600 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-amber-500">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 mb-1">カテゴリー</label>
+                            <select id="adminNewsCategory" class="w-full bg-slate-700 border border-slate-600 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                <option value="動画更新">動画更新</option>
+                                <option value="生放送">生放送</option>
+                                <option value="お知らせ">お知らせ</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 mb-1">本文</label>
+                        <textarea id="adminNewsContent" rows="2" placeholder="詳細を入力..." class="w-full bg-slate-700 border border-slate-600 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-amber-500"></textarea>
+                    </div>
+                    <button id="adminPostNewsBtn" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-5 py-2 rounded-xl transition text-xs">
+                        ニュースを追加
+                    </button>
+                </div>
+
+                <div class="mt-6 border-t border-slate-700 pt-4">
+                    <h3 class="text-xs font-bold text-slate-400 mb-3">公開中ニュース一覧 (削除可能)</h3>
+                    <div id="adminNewsList" class="space-y-2">
+                        <!-- JS描画 -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- おすすめ動画編集 -->
+            <section class="bg-slate-800 rounded-2xl p-4 sm:p-6 border border-slate-700 shadow">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-base sm:text-lg font-bold text-amber-400 flex items-center space-x-2">
+                        <i class="fa-solid fa-video"></i>
+                        <span>おすすめ動画の追加・編集</span>
+                    </h2>
+                    <button id="addVideoSlotBtn" class="bg-slate-700 hover:bg-slate-600 text-white text-xs px-3 py-1.5 rounded-lg border border-slate-600">
+                        + 動画枠を増やす
+                    </button>
+                </div>
+                <div id="adminVideosEditContainer" class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    <!-- JS描画 -->
+                </div>
+            </section>
+
+            <!-- スケジュール変更 -->
+            <section class="bg-slate-800 rounded-2xl p-4 sm:p-6 border border-slate-700 shadow">
+                <h2 class="text-base sm:text-lg font-bold mb-4 text-amber-400 flex items-center space-x-2">
+                    <i class="fa-solid fa-calendar-week"></i>
+                    <span>週の予定の変更</span>
+                </h2>
+                <div id="adminScheduleEditContainer" class="grid gap-3 grid-cols-2 sm:grid-cols-4 md:grid-cols-7">
+                    <!-- JS描画 -->
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- 管理者パスワード入力モーダル -->
+    <div id="adminModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm hidden p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md shadow-2xl border border-gray-200 dark:border-gray-700 relative">
+            <button id="closeAdminModalBtn" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+            <div class="text-center mb-6">
+                <div class="w-12 h-12 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mx-auto mb-3 text-xl">
+                    <i class="fa-solid fa-user-shield"></i>
+                </div>
+                <h3 class="text-lg font-bold">管理者アクセス</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">パスワードを入力してください</p>
+            </div>
+            
+            <form id="adminLoginForm" onsubmit="return false;">
+                <div class="mb-4">
+                    <input type="password" id="adminPasswordInput" placeholder="パスワード..." 
+                           class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition text-sm">
+                    <p id="loginError" class="text-red-500 text-xs mt-2 hidden text-left"><i class="fa-solid fa-circle-exclamation mr-1"></i>パスワードが正しくありません。</p>
+                </div>
+                <button type="submit" id="submitAdminBtn" 
+                        class="w-full bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-bold py-3 rounded-xl hover:opacity-90 transition text-sm">
+                    認証
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- JavaScript メインロジック -->
+    <script>
+        // --- アプリ基本状態 ---
+        let subscriberCount = "0人";
+
+        let timerData = {
+            active: true,
+            title: "次回大型生配信企画！",
+            targetDatetime: "2026-08-10T20:00"
+        };
+
+        let newsData = [];
+        let videoData = [];
+        let scheduleData = [
+            { day: "月", en: "MON", text: "予定なし", type: "off" },
+            { day: "火", en: "TUE", text: "予定なし", type: "off" },
+            { day: "水", en: "WED", text: "予定なし", type: "off" },
+            { day: "木", en: "THU", text: "予定なし", type: "off" },
+            { day: "金", en: "FRI", text: "予定なし", type: "off" },
+            { day: "土", en: "SAT", text: "予定なし", type: "off" },
+            { day: "日", en: "SUN", text: "予定なし", type: "off" }
+        ];
+
+        let commentsData = [];
+        let forumPostsData = [];
+        let registeredUsers = [];
+        let currentUser = null;
+
+        // Firebase初期化待機フラグ
+        let isFirebaseReady = false;
+
+        // DOM参照
+        const publicView = document.getElementById('publicView');
+        const adminView = document.getElementById('adminView');
+        const openAdminModalBtn = document.getElementById('openAdminModalBtn');
+        const closeAdminModalBtn = document.getElementById('closeAdminModalBtn');
+        const adminModal = document.getElementById('adminModal');
+        const adminLoginForm = document.getElementById('adminLoginForm');
+        const adminPasswordInput = document.getElementById('adminPasswordInput');
+        const loginError = document.getElementById('loginError');
+        const exitAdminBtn = document.getElementById('exitAdminBtn');
+        const subscriberCountDisplay = document.getElementById('subscriberCountDisplay');
+        const themeToggleBtn = document.getElementById('themeToggleBtn');
+
+        const countdownBox = document.getElementById('countdownBox');
+        const timerTitleDisplay = document.getElementById('timerTitleDisplay');
+        const timerDateTargetText = document.getElementById('timerDateTargetText');
+        const timerDays = document.getElementById('timerDays');
+        const timerHours = document.getElementById('timerHours');
+        const timerMinutes = document.getElementById('timerMinutes');
+        const timerSeconds = document.getElementById('timerSeconds');
+
+        const adminTimerTitle = document.getElementById('adminTimerTitle');
+        const adminTimerDatetime = document.getElementById('adminTimerDatetime');
+        const adminTimerActive = document.getElementById('adminTimerActive');
+        const saveTimerBtn = document.getElementById('saveTimerBtn');
+
+        const messageModal = document.getElementById('messageModal');
+        const openMessageModalBtn = document.getElementById('openMessageModalBtn');
+        const mobileOpenMessageBtn = document.getElementById('mobileOpenMessageBtn');
+        const heroOpenMessageBtn = document.getElementById('heroOpenMessageBtn');
+        const closeMessageModalBtn = document.getElementById('closeMessageModalBtn');
+
+        const userLoginModal = document.getElementById('userLoginModal');
+        const navLoginBtn = document.getElementById('navLoginBtn');
+        const closeUserLoginModalBtn = document.getElementById('closeUserLoginModalBtn');
+        const forumLoginTriggerBtn = document.getElementById('forumLoginTriggerBtn');
+        const userStatusBadge = document.getElementById('userStatusBadge');
+        const navNickname = document.getElementById('navNickname');
+        const logoutUserBtn = document.getElementById('logoutUserBtn');
+
+        const step1Content = document.getElementById('step1Content');
+        const step2Content = document.getElementById('step2Content');
+        const step3Content = document.getElementById('step3Content');
+        const stepDot1 = document.getElementById('stepDot1');
+        const stepDot2 = document.getElementById('stepDot2');
+        const stepDot3 = document.getElementById('stepDot3');
+
+        const inputLastName = document.getElementById('inputLastName');
+        const inputFirstName = document.getElementById('inputFirstName');
+        const inputEmail = document.getElementById('inputEmail');
+        const inputNickname = document.getElementById('inputNickname');
+
+        const nextStep1Btn = document.getElementById('nextStep1Btn');
+        const nextStep2Btn = document.getElementById('nextStep2Btn');
+        const backStep2Btn = document.getElementById('backStep2Btn');
+        const backStep3Btn = document.getElementById('backStep3Btn');
+        const completeLoginBtn = document.getElementById('completeLoginBtn');
+
+        const forumLockNotice = document.getElementById('forumLockNotice');
+        const forumMainContent = document.getElementById('forumMainContent');
+        const forumUserHeader = document.getElementById('forumUserHeader');
+        const forumPosterNickname = document.getElementById('forumPosterNickname');
+        const forumPostForm = document.getElementById('forumPostForm');
+        const forumPostText = document.getElementById('forumPostText');
+        const forumPostsContainer = document.getElementById('forumPostsContainer');
+
+        const newsContainer = document.getElementById('newsContainer');
+        const videosContainer = document.getElementById('videosContainer');
+        const scheduleContainer = document.getElementById('scheduleContainer');
+        const commentsContainer = document.getElementById('commentsContainer');
+
+        const adminUsersTableBody = document.getElementById('adminUsersTableBody');
+        const adminUserTotalBadge = document.getElementById('adminUserTotalBadge');
+        const adminSubCountInput = document.getElementById('adminSubCountInput');
+        const updateSubCountBtn = document.getElementById('updateSubCountBtn');
+        const adminNewsTitle = document.getElementById('adminNewsTitle');
+        const adminNewsCategory = document.getElementById('adminNewsCategory');
+        const adminNewsContent = document.getElementById('adminNewsContent');
+        const adminPostNewsBtn = document.getElementById('adminPostNewsBtn');
+        const adminNewsList = document.getElementById('adminNewsList');
+        const adminVideosEditContainer = document.getElementById('adminVideosEditContainer');
+        const addVideoSlotBtn = document.getElementById('addVideoSlotBtn');
+        const adminScheduleEditContainer = document.getElementById('adminScheduleEditContainer');
+
+        const submitCommentBtn = document.getElementById('submitCommentBtn');
+        const commentAuthor = document.getElementById('commentAuthor');
+        const commentText = document.getElementById('commentText');
+
+        let timerIntervalId = null;
+
+        // --- Firebase Ready Check & Init ---
+        async function initAppAndFirebase() {
+            loadLocalSession();
+            renderAllPublicData();
+            startCountdownTimer();
+
+            // Firebaseの読み込み待機とリアルタイム認証設定
+            let retries = 0;
+            while (!window.db && retries < 10) {
+                await new Promise(r => setTimeout(r, 200));
+                retries++;
+            }
+
+            if (window.db && window.auth) {
+                isFirebaseReady = true;
+                try {
+                    await signInAnonymously(window.auth);
+                } catch (err) {
+                    console.log("Firebase Auth initialized", err);
+                }
+                setupFirestoreListeners();
+            } else {
+                console.log("Using Local Fallback Storage");
+            }
+
+            updateUserLoginState();
+        }
+
+        document.addEventListener('DOMContentLoaded', initAppAndFirebase);
+
+        // テーマ切り替え
+        themeToggleBtn.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+        });
+
+        // パスワード確認
+        function checkPassword(input) {
+            if (!input) return false;
+            const normalized = input.trim()
+                .replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xFEE0))
+                .toLowerCase();
+            return normalized === 'oko8911' || normalized === 'おこ8911';
+        }
+
+        // --- Firebase Firestore リアルタイムリスナー ---
+        function setupFirestoreListeners() {
+            if (!isFirebaseReady) return;
+            const { collection, onSnapshot } = window.firestoreModules;
+
+            // 1. 掲示板リアルタイム同期
+            try {
+                const forumRef = collection(window.db, 'artifacts', window.appId, 'public', 'data', 'forum_posts');
+                onSnapshot(forumRef, (snapshot) => {
+                    forumPostsData = snapshot.docs.map(doc => doc.data()).sort((a,b) => b.timestamp - a.timestamp);
+                    renderForumPosts();
+                }, (error) => console.log("Forum sync fallback:", error));
+            } catch(e) {}
+
+            // 2. 応援メッセージリアルタイム同期
+            try {
+                const commentsRef = collection(window.db, 'artifacts', window.appId, 'public', 'data', 'comments');
+                onSnapshot(commentsRef, (snapshot) => {
+                    commentsData = snapshot.docs.map(doc => doc.data()).sort((a,b) => b.timestamp - a.timestamp);
+                    renderPublicComments();
+                }, (error) => console.log("Comments sync fallback:", error));
+            } catch(e) {}
+
+            // 3. ユーザー一覧リアルタイム同期
+            try {
+                const usersRef = collection(window.db, 'artifacts', window.appId, 'public', 'data', 'registered_users');
+                onSnapshot(usersRef, (snapshot) => {
+                    registeredUsers = snapshot.docs.map(doc => doc.data()).sort((a,b) => b.timestamp - a.timestamp);
+                    renderAdminUserList();
+                }, (error) => console.log("Users sync fallback:", error));
+            } catch(e) {}
+        }
+
+        // --- ローカルセッション保存/復元 ---
+        function loadLocalSession() {
+            try {
+                const savedSession = localStorage.getItem('oko_user_session');
+                if (savedSession) currentUser = JSON.parse(savedSession);
+
+                const savedUsers = localStorage.getItem('oko_registered_users');
+                if (savedUsers) registeredUsers = JSON.parse(savedUsers);
+
+                const savedForum = localStorage.getItem('oko_forum_posts');
+                if (savedForum) forumPostsData = JSON.parse(savedForum);
+
+                const savedComments = localStorage.getItem('oko_comments');
+                if (savedComments) commentsData = JSON.parse(savedComments);
+            } catch(e) {}
+        }
+
+        function saveLocalSession() {
+            try {
+                if (currentUser) {
+                    localStorage.setItem('oko_user_session', JSON.stringify(currentUser));
+                } else {
+                    localStorage.removeItem('oko_user_session');
+                }
+            } catch(e) {}
+        }
+
+        // --- ログイン状態と画面表示の更新 ---
+        function updateUserLoginState() {
+            if (currentUser) {
+                navLoginBtn.classList.add('hidden');
+                userStatusBadge.classList.remove('hidden');
+                navNickname.textContent = currentUser.nickname;
+                forumPosterNickname.textContent = currentUser.nickname;
+
+                forumLockNotice.classList.add('hidden');
+                forumMainContent.classList.remove('hidden');
+                forumUserHeader.innerHTML = `
+                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                        ログイン中: <span class="font-bold text-gray-900 dark:text-white">${escapeHtml(currentUser.nickname)}</span> さん
+                    </div>
+                `;
+                renderForumPosts();
+            } else {
+                navLoginBtn.classList.remove('hidden');
+                userStatusBadge.classList.add('hidden');
+
+                forumLockNotice.classList.remove('hidden');
+                forumMainContent.classList.add('hidden');
+                forumUserHeader.innerHTML = '';
+            }
+        }
+
+        logoutUserBtn.addEventListener('click', () => {
+            if (confirm('ログアウトしますか？')) {
+                currentUser = null;
+                saveLocalSession();
+                updateUserLoginState();
+            }
+        });
+
+        // --- ステップバイステップ 登録/ログインモーダル ---
+        const openUserLoginModal = () => {
+            userLoginModal.classList.remove('hidden');
+            goToStep(1);
+        };
+
+        const closeUserLoginModal = () => {
+            userLoginModal.classList.add('hidden');
+        };
+
+        navLoginBtn.addEventListener('click', openUserLoginModal);
+        forumLoginTriggerBtn.addEventListener('click', openUserLoginModal);
+        closeUserLoginModalBtn.addEventListener('click', closeUserLoginModal);
+
+        function goToStep(step) {
+            step1Content.classList.add('hidden');
+            step2Content.classList.add('hidden');
+            step3Content.classList.add('hidden');
+
+            stepDot1.className = "w-8 h-8 rounded-full bg-white/40 text-white font-bold flex items-center justify-center text-xs";
+            stepDot2.className = "w-8 h-8 rounded-full bg-white/40 text-white font-bold flex items-center justify-center text-xs";
+            stepDot3.className = "w-8 h-8 rounded-full bg-white/40 text-white font-bold flex items-center justify-center text-xs";
+
+            if (step === 1) {
+                step1Content.classList.remove('hidden');
+                stepDot1.className = "w-8 h-8 rounded-full bg-white text-red-600 font-bold flex items-center justify-center text-xs shadow";
+            } else if (step === 2) {
+                step2Content.classList.remove('hidden');
+                stepDot1.className = "w-8 h-8 rounded-full bg-white text-red-600 font-bold flex items-center justify-center text-xs shadow";
+                stepDot2.className = "w-8 h-8 rounded-full bg-white text-red-600 font-bold flex items-center justify-center text-xs shadow";
+            } else if (step === 3) {
+                step3Content.classList.remove('hidden');
+                stepDot1.className = "w-8 h-8 rounded-full bg-white text-red-600 font-bold flex items-center justify-center text-xs shadow";
+                stepDot2.className = "w-8 h-8 rounded-full bg-white text-red-600 font-bold flex items-center justify-center text-xs shadow";
+                stepDot3.className = "w-8 h-8 rounded-full bg-white text-red-600 font-bold flex items-center justify-center text-xs shadow";
+            }
+        }
+
+        nextStep1Btn.addEventListener('click', () => {
+            const lastName = inputLastName.value.trim();
+            const firstName = inputFirstName.value.trim();
+            if (!lastName || !firstName) {
+                alert('苗字と名前を入力してください。');
+                return;
+            }
+            goToStep(2);
+        });
+
+        backStep2Btn.addEventListener('click', () => goToStep(1));
+
+        nextStep2Btn.addEventListener('click', () => {
+            const email = inputEmail.value.trim();
+            if (!email || !email.includes('@')) {
+                alert('有効なメールアドレスを入力してください。');
+                return;
+            }
+            goToStep(3);
+        });
+
+        backStep3Btn.addEventListener('click', () => goToStep(2));
+
+        completeLoginBtn.addEventListener('click', async () => {
+            const nickname = inputNickname.value.trim();
+            if (!nickname) {
+                alert('ニックネームを入力してください。');
+                return;
+            }
+
+            const now = new Date();
+            const regTime = `${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+            const userData = {
+                lastName: inputLastName.value.trim(),
+                firstName: inputFirstName.value.trim(),
+                email: inputEmail.value.trim(),
+                nickname: nickname,
+                registeredAt: regTime,
+                timestamp: Date.now()
+            };
+
+            // Firestore クラウド保存
+            if (isFirebaseReady) {
+                try {
+                    const { collection, addDoc } = window.firestoreModules;
+                    await addDoc(collection(window.db, 'artifacts', window.appId, 'public', 'data', 'registered_users'), userData);
+                } catch(e) {
+                    console.log("User save error", e);
+                }
+            }
+
+            // ローカル保存
+            registeredUsers.push(userData);
+            localStorage.setItem('oko_registered_users', JSON.stringify(registeredUsers));
+
+            currentUser = userData;
+            saveLocalSession();
+
+            closeUserLoginModal();
+            updateUserLoginState();
+
+            inputLastName.value = '';
+            inputFirstName.value = '';
+            inputEmail.value = '';
+            inputNickname.value = '';
+
+            alert(`登録が完了しました！ようこそ、${nickname} さん！`);
+        });
+
+        // --- 掲示板 ロジック ---
+        function renderForumPosts() {
+            forumPostsContainer.innerHTML = '';
+            if (forumPostsData.length === 0) {
+                forumPostsContainer.innerHTML = `
+                    <p class="text-center py-8 text-xs text-gray-400">掲示板への書き込みはまだありません。最初のメッセージを投稿しましょう！</p>
+                `;
+                return;
+            }
+
+            forumPostsData.forEach((post) => {
+                const el = document.createElement('div');
+                el.className = "bg-gray-50 dark:bg-gray-700/50 rounded-2xl p-4 border border-gray-100 dark:border-gray-700 space-y-1.5";
+                el.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span class="font-bold text-xs text-gray-900 dark:text-white flex items-center space-x-1">
+                            <i class="fa-solid fa-user-circle text-red-500"></i>
+                            <span>${escapeHtml(post.nickname)}</span>
+                        </span>
+                        <span class="text-[10px] text-gray-400">${post.date}</span>
+                    </div>
+                    <p class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">${escapeHtml(post.text)}</p>
+                `;
+                forumPostsContainer.appendChild(el);
+            });
+        }
+
+        forumPostForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentUser) return;
+
+            const text = forumPostText.value.trim();
+            if (!text) return;
+
+            const now = new Date();
+            const timeStr = `${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+            const postObj = {
+                nickname: currentUser.nickname,
+                text: text,
+                date: timeStr,
+                timestamp: Date.now()
+            };
+
+            // クラウドDBに書き込み
+            if (isFirebaseReady) {
+                try {
+                    const { collection, addDoc } = window.firestoreModules;
+                    await addDoc(collection(window.db, 'artifacts', window.appId, 'public', 'data', 'forum_posts'), postObj);
+                } catch(e) { console.log(e); }
+            }
+
+            forumPostsData.unshift(postObj);
+            localStorage.setItem('oko_forum_posts', JSON.stringify(forumPostsData));
+            renderForumPosts();
+            forumPostText.value = '';
+        });
+
+        // --- カウントダウンタイマー ---
+        function startCountdownTimer() {
+            if (timerIntervalId) clearInterval(timerIntervalId);
+
+            if (!timerData.active) {
+                countdownBox.classList.add('hidden');
+                return;
+            } else {
+                countdownBox.classList.remove('hidden');
+            }
+
+            timerTitleDisplay.textContent = timerData.title;
+            const targetDate = new Date(timerData.targetDatetime);
+            
+            if (isNaN(targetDate.getTime())) {
+                timerDateTargetText.textContent = "日時未設定";
+                return;
+            }
+
+            timerDateTargetText.textContent = `予定日時: ${targetDate.getFullYear()}年${targetDate.getMonth()+1}月${targetDate.getDate()}日 ${String(targetDate.getHours()).padStart(2,'0')}:${String(targetDate.getMinutes()).padStart(2,'0')}`;
+
+            function update() {
+                const now = new Date();
+                const diff = targetDate - now;
+
+                if (diff <= 0) {
+                    timerDays.textContent = "00";
+                    timerHours.textContent = "00";
+                    timerMinutes.textContent = "00";
+                    timerSeconds.textContent = "00";
+                    document.getElementById('timerStatusTag').textContent = "配信中 / 開催中！";
+                    return;
+                }
+
+                document.getElementById('timerStatusTag').textContent = "NEXT LIVE / EVENT";
+                const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+                const m = Math.floor((diff / 1000 / 60) % 60);
+                const s = Math.floor((diff / 1000) % 60);
+
+                timerDays.textContent = String(d).padStart(2, '0');
+                timerHours.textContent = String(h).padStart(2, '0');
+                timerMinutes.textContent = String(m).padStart(2, '0');
+                timerSeconds.textContent = String(s).padStart(2, '0');
+            }
+
+            update();
+            timerIntervalId = setInterval(update, 1000);
+        }
+
+        // --- モーダル制御 ---
+        const toggleMessageModal = (show) => {
+            if (show) {
+                messageModal.classList.remove('hidden');
+                renderPublicComments();
+            } else {
+                messageModal.classList.add('hidden');
+            }
+        };
+
+        openMessageModalBtn.addEventListener('click', () => toggleMessageModal(true));
+        mobileOpenMessageBtn.addEventListener('click', () => toggleMessageModal(true));
+        heroOpenMessageBtn.addEventListener('click', () => toggleMessageModal(true));
+        closeMessageModalBtn.addEventListener('click', () => toggleMessageModal(false));
+
+        openAdminModalBtn.addEventListener('click', () => {
+            adminModal.classList.remove('hidden');
+            adminPasswordInput.focus();
+        });
+
+        closeAdminModalBtn.addEventListener('click', () => {
+            adminModal.classList.add('hidden');
+            loginError.classList.add('hidden');
+            adminPasswordInput.value = '';
+        });
+
+        adminLoginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (checkPassword(adminPasswordInput.value)) {
+                adminModal.classList.add('hidden');
+                adminPasswordInput.value = '';
+                loginError.classList.add('hidden');
+                
+                publicView.classList.add('hidden');
+                adminView.classList.remove('hidden');
+                initAdminDashboard();
+            } else {
+                loginError.classList.remove('hidden');
+                adminPasswordInput.value = '';
+            }
+        });
+
+        exitAdminBtn.addEventListener('click', () => {
+            adminView.classList.add('hidden');
+            publicView.classList.remove('hidden');
+            renderAllPublicData();
+            startCountdownTimer();
+            updateUserLoginState();
+        });
+
+        // --- レンダリング ---
+        function renderAllPublicData() {
+            subscriberCountDisplay.textContent = subscriberCount;
+            renderPublicNews();
+            renderPublicVideos();
+            renderPublicSchedule();
+        }
+
+        function renderPublicNews() {
+            newsContainer.innerHTML = '';
+            if (newsData.length === 0) {
+                newsContainer.innerHTML = `
+                    <div class="col-span-full text-center py-12 text-gray-400 bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
+                        <i class="fa-solid fa-newspaper text-3xl mb-2 text-gray-300"></i>
+                        <p class="text-sm">現在お知らせはありません</p>
+                    </div>
+                `;
+                return;
+            }
+
+            newsData.forEach((item) => {
+                let badgeClass = "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300";
+                if (item.category === "生放送") badgeClass = "bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300";
+                if (item.category === "動画更新") badgeClass = "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300";
+
+                const card = document.createElement('div');
+                card.className = "bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm hover:shadow-md transition border border-gray-100 dark:border-gray-700 flex flex-col justify-between";
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded ${badgeClass}">${item.category}</span>
+                            <span class="text-[10px] text-gray-400"><i class="fa-regular fa-clock mr-1"></i>${item.date}</span>
+                        </div>
+                        <h3 class="font-bold text-base mb-1.5 text-gray-900 dark:text-white leading-snug">${escapeHtml(item.title)}</h3>
+                        <p class="text-xs text-gray-600 dark:text-gray-300 whitespace-pre-line leading-relaxed">${escapeHtml(item.content)}</p>
+                    </div>
+                `;
+                newsContainer.appendChild(card);
+            });
+        }
+
+        function renderPublicVideos() {
+            videosContainer.innerHTML = '';
+            if (videoData.length === 0) {
+                videosContainer.innerHTML = `
+                    <div class="col-span-full text-center py-12 text-gray-400 bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
+                        <i class="fa-solid fa-video text-3xl mb-2 text-gray-300"></i>
+                        <p class="text-sm">登録されたおすすめ動画はありません</p>
+                    </div>
+                `;
+                return;
+            }
+
+            videoData.forEach((vid) => {
+                const card = document.createElement('div');
+                card.className = "bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition border border-gray-100 dark:border-gray-700 flex flex-col";
+                card.innerHTML = `
+                    <div class="relative bg-gray-900 aspect-video flex items-center justify-center">
+                        <div class="text-center p-4">
+                            <i class="fa-brands fa-youtube text-4xl text-red-600 mb-1"></i>
+                            <p class="text-[10px] text-gray-400">おこCH 動画</p>
+                        </div>
+                        <a href="${vid.url || 'https://youtube.com/@oko-234'}" target="_blank" class="absolute inset-0 bg-black/40 hover:bg-black/20 transition flex items-center justify-center group">
+                            <div class="w-10 h-10 bg-red-600 text-white rounded-full flex items-center justify-center group-hover:scale-110 transition shadow">
+                                <i class="fa-solid fa-play ml-0.5 text-sm"></i>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="p-4 flex-grow flex flex-col justify-between">
+                        <div>
+                            <h3 class="font-bold text-sm line-clamp-2 hover:text-red-600 transition">${escapeHtml(vid.title)}</h3>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1.5">${escapeHtml(vid.desc)}</p>
+                        </div>
+                        <div class="mt-3 pt-2 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center text-[10px] text-gray-400">
+                            <span>YouTubeで開く</span>
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                        </div>
+                    </div>
+                `;
+                videosContainer.appendChild(card);
+            });
+        }
+
+        function renderPublicSchedule() {
+            scheduleContainer.innerHTML = '';
+            scheduleData.forEach((s) => {
+                let styleClass = "border dark:border-gray-700";
+                let tagClass = "bg-gray-100 dark:bg-gray-700 text-gray-500";
+                
+                if (s.type === 'live') {
+                    styleClass = "border border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20";
+                    tagClass = "bg-red-600 text-white font-bold";
+                } else if (s.type === 'video') {
+                    styleClass = "border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20";
+                    tagClass = "bg-amber-500 text-white font-bold";
+                }
+
+                const item = document.createElement('div');
+                item.className = `${styleClass} rounded-xl p-2.5 text-center flex flex-col justify-between`;
+                item.innerHTML = `
+                    <div>
+                        <span class="text-[10px] font-bold text-gray-400">${s.en}</span>
+                        <div class="font-black text-base my-0.5">${s.day}</div>
+                    </div>
+                    <div class="mt-1">
+                        <span class="inline-block text-[10px] px-1.5 py-0.5 rounded ${tagClass}">${escapeHtml(s.text)}</span>
+                    </div>
+                `;
+                scheduleContainer.appendChild(item);
+            });
+        }
+
+        function renderPublicComments() {
+            commentsContainer.innerHTML = '';
+            if (commentsData.length === 0) {
+                commentsContainer.innerHTML = `
+                    <p class="text-center py-6 text-gray-400 text-xs">まだメッセージはありません。一番乗りで応援メッセージを送ろう！</p>
+                `;
+                return;
+            }
+
+            commentsData.forEach((c) => {
+                const el = document.createElement('div');
+                el.className = "bg-gray-50 dark:bg-gray-700/50 rounded-2xl p-3.5 border border-gray-100 dark:border-gray-700";
+                el.innerHTML = `
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-bold text-xs text-gray-900 dark:text-white">${escapeHtml(c.author)}</span>
+                        <span class="text-[10px] text-gray-400">${c.date}</span>
+                    </div>
+                    <p class="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">${escapeHtml(c.text)}</p>
+                `;
+                commentsContainer.appendChild(el);
+            });
+        }
+
+        submitCommentBtn.addEventListener('click', async () => {
+            const text = commentText.value.trim();
+            let author = commentAuthor.value.trim();
+
+            if (!text) {
+                alert('メッセージ内容を入力してください。');
+                return;
+            }
+
+            if (!author) author = "名無しのおこファン";
+
+            const now = new Date();
+            const timeStr = `${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+            const commentObj = { author: author, text: text, date: timeStr, timestamp: Date.now() };
+
+            if (isFirebaseReady) {
+                try {
+                    const { collection, addDoc } = window.firestoreModules;
+                    await addDoc(collection(window.db, 'artifacts', window.appId, 'public', 'data', 'comments'), commentObj);
+                } catch(e) {}
+            }
+
+            commentsData.unshift(commentObj);
+            localStorage.setItem('oko_comments', JSON.stringify(commentsData));
+            renderPublicComments();
+            commentText.value = '';
+            commentAuthor.value = '';
+        });
+
+        // --- 管理者専用ダッシュボード ---
+        function initAdminDashboard() {
+            renderAdminUserList();
+
+            adminSubCountInput.value = subscriberCount;
+            adminTimerTitle.value = timerData.title;
+            adminTimerDatetime.value = timerData.targetDatetime;
+            adminTimerActive.checked = timerData.active;
+
+            renderAdminNewsList();
+            renderAdminVideosEdit();
+            renderAdminScheduleEdit();
+        }
+
+        function renderAdminUserList() {
+            adminUsersTableBody.innerHTML = '';
+            adminUserTotalBadge.textContent = `登録数: ${registeredUsers.length}人`;
+
+            if (registeredUsers.length === 0) {
+                adminUsersTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="py-6 text-center text-slate-500 text-xs">登録されたユーザーはいません</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            registeredUsers.forEach((u) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-700/50 transition";
+                tr.innerHTML = `
+                    <td class="py-2.5 px-3 text-slate-400">${u.registeredAt || '未記録'}</td>
+                    <td class="py-2.5 px-3 font-bold text-white">${escapeHtml(u.lastName)} ${escapeHtml(u.firstName)}</td>
+                    <td class="py-2.5 px-3 text-amber-300 font-mono">${escapeHtml(u.email)}</td>
+                    <td class="py-2.5 px-3 font-bold text-red-400">${escapeHtml(u.nickname)}</td>
+                `;
+                adminUsersTableBody.appendChild(tr);
+            });
+        }
+
+        saveTimerBtn.addEventListener('click', () => {
+            timerData.title = adminTimerTitle.value.trim() || "イベント・生配信予定";
+            timerData.targetDatetime = adminTimerDatetime.value;
+            timerData.active = adminTimerActive.checked;
+            alert('カウントダウンタイマー設定を保存しました！');
+        });
+
+        updateSubCountBtn.addEventListener('click', () => {
+            const val = adminSubCountInput.value.trim();
+            if (val) {
+                subscriberCount = val;
+                subscriberCountDisplay.textContent = subscriberCount;
+                alert(`登録者数を 「${subscriberCount}」 に即時更新しました！`);
+            }
+        });
+
+        adminPostNewsBtn.addEventListener('click', () => {
+            const title = adminNewsTitle.value.trim();
+            const category = adminNewsCategory.value;
+            const content = adminNewsContent.value.trim();
+
+            if (!title || !content) {
+                alert('タイトルと本文を入力してください。');
+                return;
+            }
+
+            const today = new Date().toISOString().split('T')[0];
+            newsData.unshift({ id: Date.now(), title: title, category: category, content: content, date: today });
+            adminNewsTitle.value = '';
+            adminNewsContent.value = '';
+            renderAdminNewsList();
+            alert('ニュースを追加しました！');
+        });
+
+        function renderAdminNewsList() {
+            adminNewsList.innerHTML = '';
+            if (newsData.length === 0) {
+                adminNewsList.innerHTML = `<p class="text-xs text-slate-500 py-2">ニュースはありません</p>`;
+                return;
+            }
+
+            newsData.forEach((item) => {
+                const row = document.createElement('div');
+                row.className = "bg-slate-700 p-2.5 rounded-xl flex items-center justify-between text-xs";
+                row.innerHTML = `
+                    <div class="space-x-2 truncate pr-2">
+                        <span class="font-bold text-amber-400">[${item.category}]</span>
+                        <span class="font-bold text-white">${escapeHtml(item.title)}</span>
+                    </div>
+                    <button onclick="deleteNewsAdmin(${item.id})" class="text-red-400 hover:text-red-300 font-bold px-2 py-1 bg-slate-800 rounded flex-shrink-0">
+                        削除
+                    </button>
+                `;
+                adminNewsList.appendChild(row);
+            });
+        }
+
+        window.deleteNewsAdmin = function(id) {
+            if (confirm('このニュースを削除しますか？')) {
+                newsData = newsData.filter(n => n.id !== id);
+                renderAdminNewsList();
+            }
+        };
+
+        addVideoSlotBtn.addEventListener('click', () => {
+            videoData.push({
+                title: "新規動画枠",
+                desc: "動画の説明文を入力してください",
+                url: "https://youtube.com/@oko-234"
+            });
+            renderAdminVideosEdit();
+        });
+
+        function renderAdminVideosEdit() {
+            adminVideosEditContainer.innerHTML = '';
+            if (videoData.length === 0) {
+                adminVideosEditContainer.innerHTML = `<p class="text-xs text-slate-500 col-span-full">右上ボタンから動画枠を追加できます</p>`;
+                return;
+            }
+
+            videoData.forEach((vid, index) => {
+                const card = document.createElement('div');
+                card.className = "bg-slate-700 p-3.5 rounded-xl space-y-2.5 text-xs";
+                card.innerHTML = `
+                    <div class="flex justify-between items-center font-bold text-amber-400">
+                        <span>動画枠 ${index + 1}</span>
+                        <button onclick="deleteVideoSlot(${index})" class="text-red-400 hover:underline text-[10px]">削除</button>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-400">タイトル</label>
+                        <input type="text" id="v_title_${index}" value="${escapeHtml(vid.title)}" class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-400">説明</label>
+                        <textarea id="v_desc_${index}" rows="2" class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white">${escapeHtml(vid.desc)}</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-400">URL</label>
+                        <input type="text" id="v_url_${index}" value="${escapeHtml(vid.url)}" class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white">
+                    </div>
+                    <button onclick="saveVideoAdmin(${index})" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-1 rounded transition">
+                        この枠を更新
+                    </button>
+                `;
+                adminVideosEditContainer.appendChild(card);
+            });
+        }
+
+        window.saveVideoAdmin = function(index) {
+            videoData[index].title = document.getElementById(`v_title_${index}`).value;
+            videoData[index].desc = document.getElementById(`v_desc_${index}`).value;
+            videoData[index].url = document.getElementById(`v_url_${index}`).value;
+            alert(`動画枠 ${index + 1} を保存しました！`);
+        };
+
+        window.deleteVideoSlot = function(index) {
+            videoData.splice(index, 1);
+            renderAdminVideosEdit();
+        };
+
+        function renderAdminScheduleEdit() {
+            adminScheduleEditContainer.innerHTML = '';
+            scheduleData.forEach((s, index) => {
+                const item = document.createElement('div');
+                item.className = "bg-slate-700 p-2.5 rounded-xl space-y-1.5 text-center text-xs";
+                item.innerHTML = `
+                    <div class="font-bold text-white">${s.day} (${s.en})</div>
+                    <input type="text" id="s_text_${index}" value="${escapeHtml(s.text)}" class="w-full bg-slate-800 border border-slate-600 rounded px-1.5 py-1 text-[10px] text-white text-center">
+                    <select id="s_type_${index}" class="w-full bg-slate-800 border border-slate-600 rounded px-1 py-1 text-[10px] text-white">
+                        <option value="off" ${s.type === 'off' ? 'selected' : ''}>通常</option>
+                        <option value="live" ${s.type === 'live' ? 'selected' : ''}>生放送 (赤)</option>
+                        <option value="video" ${s.type === 'video' ? 'selected' : ''}>動画 (黄)</option>
+                    </select>
+                    <button onclick="saveScheduleAdmin(${index})" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-[10px] py-0.5 rounded">
+                        保存
+                    </button>
+                `;
+                adminScheduleEditContainer.appendChild(item);
+            });
+        }
+
+        window.saveScheduleAdmin = function(index) {
+            scheduleData[index].text = document.getElementById(`s_text_${index}`).value;
+            scheduleData[index].type = document.getElementById(`s_type_${index}`).value;
+            alert(`${scheduleData[index].day}曜日の予定を保存しました！`);
+        };
+
+        function escapeHtml(str) {
+            if(!str) return '';
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
